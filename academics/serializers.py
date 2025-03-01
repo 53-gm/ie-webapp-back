@@ -1,11 +1,22 @@
-import logging
 from rest_framework import serializers
-from .models import Lecture, Registration, Term, Schedule
-from accounts.models import Department
-from accounts.serializers import DepartmentSerializer
-from .models import Task
 
-logger = logging.getLogger(__name__)
+from academics.constants import TERM_CHOICES
+
+from .models import Department, Faculty, Lecture, Registration, Schedule, Term
+
+
+class FacultySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Faculty
+        fields = ["id", "name"]
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    faculty = FacultySerializer(read_only=True)
+
+    class Meta:
+        model = Department
+        fields = ["id", "name", "faculty"]
 
 
 class TermSerializer(serializers.ModelSerializer):
@@ -14,7 +25,7 @@ class TermSerializer(serializers.ModelSerializer):
         fields = ["number"]
 
     def validate_number(self, value):
-        if value not in dict(Term.TERM_CHOICES):
+        if value not in dict(TERM_CHOICES):
             raise serializers.ValidationError(
                 "タームは1から4の間でなければなりません。"
             )
@@ -115,28 +126,3 @@ class RegistrationSerializer(serializers.ModelSerializer):
             )
 
         return data
-
-
-class TaskSerializer(serializers.ModelSerializer):
-
-    lecture = LectureSerializer(read_only=True)
-    lecture_id = serializers.PrimaryKeyRelatedField(
-        queryset=Lecture.objects.all(),
-        write_only=True,
-        source="lecture",
-    )
-
-    class Meta:
-        model = Task
-        fields = [
-            "id",
-            "lecture",
-            "lecture_id",
-            "title",
-            "description",
-            "status",
-            "due_date",
-            "priority",
-            "created_at",
-            "updated_at",
-        ]

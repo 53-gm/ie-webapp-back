@@ -1,16 +1,31 @@
-from rest_framework import viewsets, permissions, filters
-from .models import Lecture, Registration, Schedule, Task
+from django.shortcuts import render
+from rest_framework.permissions import AllowAny
+from rest_framework import generics
+
+from academics.filters import RegistrationFilter, LectureFilter
+from .models import Department, Faculty, Lecture, Registration, Schedule
+from rest_framework import viewsets, permissions
 from .serializers import (
     LectureSerializer,
     RegistrationSerializer,
     ScheduleSerializer,
-    TaskSerializer,
+    DepartmentSerializer,
+    FacultySerializer,
 )
 from django.db.models import Q
-from django.core.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
-from .filters import LectureFilter, RegistrationFilter
-from rest_framework import generics
+
+
+class FacultyListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    queryset = Faculty.objects.all()
+    serializer_class = FacultySerializer
+
+
+class DepartmentListView(generics.ListAPIView):
+    permission_classes = [AllowAny]
+    queryset = Department.objects.all()
+    serializer_class = DepartmentSerializer
 
 
 class LectureViewSet(viewsets.ModelViewSet):
@@ -59,14 +74,3 @@ class ScheduleListView(generics.ListAPIView):
     permission_classes = [permissions.AllowAny]
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
-
-
-class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all()
-    serializer_class = TaskSerializer
-
-    def get_queryset(self):
-        return Task.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        return serializer.save(user=self.request.user)

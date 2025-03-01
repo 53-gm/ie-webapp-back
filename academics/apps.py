@@ -1,9 +1,9 @@
 from django.apps import AppConfig
 
 
-class LecturesConfig(AppConfig):
+class AcademicsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "lectures"
+    name = "academics"
 
     def ready(self):
-        import lectures.signals
+        import academics.signals

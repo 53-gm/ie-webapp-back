@@ -1,25 +1,11 @@
 import logging
 from rest_framework import serializers
-from .models import Faculty, Department, CustomUser
+from academics.models import Faculty, Department
+from academics.serializers import DepartmentSerializer, FacultySerializer
+from accounts.constants import GRADE_CHOICES
+from .models import CustomUser
 from dj_rest_auth.registration.serializers import RegisterSerializer
 from dj_rest_auth.serializers import UserDetailsSerializer
-from dj_rest_auth.registration.serializers import SocialLoginSerializer
-
-logger = logging.getLogger(__name__)
-
-
-class FacultySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Faculty
-        fields = ["id", "name"]
-
-
-class DepartmentSerializer(serializers.ModelSerializer):
-    faculty = FacultySerializer(read_only=True)
-
-    class Meta:
-        model = Department
-        fields = ["id", "name", "faculty"]
 
 
 class CustomRegisterSerializer(RegisterSerializer):
@@ -29,7 +15,7 @@ class CustomRegisterSerializer(RegisterSerializer):
     department = serializers.PrimaryKeyRelatedField(
         queryset=Department.objects.all(), required=False, allow_null=True
     )
-    grade = serializers.ChoiceField(choices=CustomUser.GRADE_CHOICES, required=False)
+    grade = serializers.ChoiceField(choices=GRADE_CHOICES, required=False)
 
     def get_cleaned_data(self):
         data = super().get_cleaned_data()
@@ -37,7 +23,7 @@ class CustomRegisterSerializer(RegisterSerializer):
         data["faculty"] = self.validated_data.get("faculty", None)
         data["department"] = self.validated_data.get("department", None)
         data["grade"] = self.validated_data.get("grade", None)
-        data["picture_url"] = self.validated_data.get("picture_url", None)
+        data["picture"] = self.validated_data.get("picture", None)
         data["user_id"] = self.validated_data.get("user_id", None)
         return data
 
@@ -47,8 +33,8 @@ class CustomRegisterSerializer(RegisterSerializer):
         user.faculty = self.validated_data.get("faculty", None)
         user.department = self.validated_data.get("department", None)
         user.grade = self.validated_data.get("grade", None)
-        user.picture_url = self.validated_data.get("picture_url", None)
-        user.user_id = self.validate_data.get("user_id", None)
+        user.picture = self.validated_data.get("picture", None)
+        user.user_id = self.validated_data.get("user_id", None)
         user.is_profile_complete = False
         user.save()
         return user
@@ -74,15 +60,18 @@ class CustomUserDetailsSerializer(UserDetailsSerializer):
             "faculty_id",
             "grade",
             "is_profile_complete",
-            "picture_url",
+            "picture",
             "user_id",
         )
 
-
-class CustomSocialLoginSerializer(SocialLoginSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ("id", "username", "email", "picture_url")
+    def validate_user_id(self, value):
+        user = self.context.get("request").user if self.context.get("request") else None
+        if (
+            user
+            and CustomUser.objects.filter(user_id=value).exclude(id=user.id).exists()
+        ):
+            raise serializers.ValidationError("このユーザーIDは既に使用されています")
+        return value
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -106,10 +95,10 @@ class ProfileSerializer(serializers.ModelSerializer):
             "department_id",
             "grade",
             "is_profile_complete",
-            "picture_url",
+            "picture",
             "user_id",
         ]
-        read_only_fields = ["email"]
+        read_only_fields = ["email", "is_profile_complete"]
 
     def update(self, instance, validated_data):
         for attr, value in validated_data.items():
@@ -117,3 +106,12 @@ class ProfileSerializer(serializers.ModelSerializer):
         instance.is_profile_complete = True  # プロファイル完了
         instance.save()
         return instance
+
+    def validate_user_id(self, value):
+        user = self.context.get("request").user if self.context.get("request") else None
+        if (
+            user
+            and CustomUser.objects.filter(user_id=value).exclude(id=user.id).exists()
+        ):
+            raise serializers.ValidationError("このユーザーIDは既に使用されています")
+        return value

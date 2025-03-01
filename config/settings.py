@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -32,6 +33,14 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env("DEBUG")
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
+
+APP_SETTINGS = {
+    "DEFAULT_PAGE_SIZE": env.int("DEFAULT_PAGE_SIZE", default=20),
+    "MAX_UPLOAD_SIZE": env.int("MAX_UPLOAD_SIZE", default=5 * 1024 * 1024),  # 5MB
+    "ALLOWED_FILE_EXTENSIONS": env.list(
+        "ALLOWED_FILE_EXTENSIONS", default=["jpg", "jpeg", "png"]
+    ),
+}
 
 
 # Application definition
@@ -58,8 +67,9 @@ INSTALLED_APPS = [
     "storages",
     "api",
     "accounts",
-    "lectures",
+    "academics",
     "articles",
+    "tasks",
 ]
 
 SITE_ID = 1
@@ -98,11 +108,13 @@ SOCIALACCOUNT_PROVIDERS = {
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.BasicAuthentication",  # 基本認証を追加
         "dj_rest_auth.jwt_auth.JWTCookieAuthentication",
     ],
-    "DEFAULT_RENDERER_CLASSES": [
-        "rest_framework.renderers.JSONRenderer",
-    ],
+    # "DEFAULT_RENDERER_CLASSES": [
+    #     "rest_framework.renderers.JSONRenderer",
+    # ],
+    "EXCEPTION_HANDLER": "common.exceptions.custom_exception_handler",
 }
 
 SIMPLE_JWT = {
@@ -118,8 +130,6 @@ REST_AUTH = {
 }
 
 AUTH_USER_MODEL = "accounts.CustomUser"
-ACCOUNT_ADAPTER = "accounts.adapter.CustomAccountAdapter"
-SOCIALACCOUNT_ADAPTER = "accounts.adapter.CustomSocialAccountAdapter"
 
 ROOT_URLCONF = "config.urls"
 
@@ -208,3 +218,95 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {message}",
+            "style": "{",
+        },
+        "json": {
+            "format": '{"time": "%(asctime)s", "level": "%(levelname)s", "message": "%(message)s", "module": "%(module)s", "path": "%(pathname)s", "lineno": %(lineno)d}',
+            "style": "%",
+        },
+    },
+    "filters": {
+        "require_debug_true": {
+            "()": "django.utils.log.RequireDebugTrue",
+        },
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "filters": ["require_debug_true"],
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(
+                BASE_DIR, "logs", f'app-{datetime.now().strftime("%Y-%m-%d")}.log'
+            ),
+            "formatter": "verbose",
+        },
+        "json_file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(
+                BASE_DIR, "logs", f'app-json-{datetime.now().strftime("%Y-%m-%d")}.log'
+            ),
+            "formatter": "json",
+        },
+        "mail_admins": {
+            "level": "ERROR",
+            "filters": ["require_debug_false"],
+            "class": "django.utils.log.AdminEmailHandler",
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+        "django.request": {
+            "handlers": ["mail_admins", "file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "academics": {
+            "handlers": ["console", "file", "json_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "accounts": {
+            "handlers": ["console", "file", "json_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "articles": {
+            "handlers": ["console", "file", "json_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "tasks": {
+            "handlers": ["console", "file", "json_file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
+}
+
+os.makedirs(os.path.join(BASE_DIR, "logs"), exist_ok=True)

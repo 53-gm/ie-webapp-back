@@ -6,8 +6,8 @@ from django.contrib import admin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 
-from accounts.models import Department
-from .models import Lecture, Registration, Schedule, Task, Term
+from .models import Department
+from .models import Lecture, Registration, Schedule, Term
 from import_export.widgets import ManyToManyWidget
 
 
@@ -97,8 +97,3 @@ class LectureAdmin(ImportExportModelAdmin):
 class RegistrationAdmin(admin.ModelAdmin):
     list_display = ("user", "lecture", "registered_at")
     date_hierarchy = "registered_at"
-
-
-@admin.register(Task)
-class TaskAdmin(admin.ModelAdmin):
-    date_hierarchy = "created_at"
