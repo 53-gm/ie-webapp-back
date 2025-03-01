@@ -125,11 +125,7 @@ SIMPLE_JWT = {
 REST_AUTH = {
     "USE_JWT": True,
     "JWT_AUTH_HTTPONLY": False,
-    "REGISTER_SERIALIZER": "accounts.serializers.CustomRegisterSerializer",
-    "USER_DETAILS_SERIALIZER": "accounts.serializers.CustomUserDetailsSerializer",
 }
-
-AUTH_USER_MODEL = "accounts.CustomUser"
 
 ROOT_URLCONF = "config.urls"
 

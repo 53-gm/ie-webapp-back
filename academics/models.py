@@ -1,26 +1,10 @@
 import uuid
-from django.conf import settings
 from django.db import models
 from django.forms import ValidationError
+from django.contrib.auth.models import User
 
 from academics.constants import DAY_CHOICES, TERM_CHOICES, TIME_CHOICES
-
-
-class Faculty(models.Model):
-    name = models.CharField(max_length=30)  # 学部名
-
-    def __str__(self):
-        return self.name
-
-
-class Department(models.Model):
-    name = models.CharField(max_length=30)  # 学科名
-    faculty = models.ForeignKey(
-        Faculty, related_name="departments", on_delete=models.CASCADE
-    )
-
-    def __str__(self):
-        return f"{self.name}"
+from accounts.models import Department
 
 
 class Term(models.Model):
@@ -91,7 +75,7 @@ class Lecture(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="登録日時")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新日時")
     owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         related_name="lectures",
         on_delete=models.CASCADE,
         verbose_name="所有者",
@@ -108,7 +92,7 @@ class Lecture(models.Model):
 
 class Registration(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         related_name="registrations",
         on_delete=models.CASCADE,
         verbose_name="ユーザー",
@@ -127,6 +111,4 @@ class Registration(models.Model):
         verbose_name_plural = "登録状況"
 
     def __str__(self):
-        return (
-            f"{self.user.display_name} が {self.lecture.name} を {self.year}年  に登録"
-        )
+        return f"{self.user.profile.display_name} が {self.lecture.name} を {self.year}年  に登録"

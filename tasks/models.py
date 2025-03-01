@@ -1,6 +1,6 @@
-from django.conf import settings
 from django.db import models
 from academics.models import Lecture
+from django.contrib.auth.models import User
 from tasks.constants import (
     TASK_PRIORITY_CHOICES,
     TASK_PRIORITY_MEDIUM,
@@ -11,7 +11,7 @@ from tasks.constants import (
 
 class Task(models.Model):
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         related_name="tasks",
         on_delete=models.CASCADE,
         verbose_name="ユーザー",

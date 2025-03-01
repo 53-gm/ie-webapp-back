@@ -1,9 +1,7 @@
-# articles/views.py
 import uuid
-from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import permissions
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.core.files.storage import default_storage
 from rest_framework import viewsets, permissions
@@ -16,10 +14,6 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from django.core.files.storage import default_storage
 import uuid
-
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 class UploadImageView(APIView):

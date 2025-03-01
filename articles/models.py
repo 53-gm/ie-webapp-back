@@ -1,7 +1,7 @@
 import uuid
 import shortuuid
 from django.db import models
-from config import settings
+from django.contrib.auth.models import User
 
 
 def generate_short_uuid():
@@ -16,7 +16,7 @@ class Article(models.Model):
         max_length=16,
     )
     author = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User,
         related_name="articles",
         on_delete=models.CASCADE,
         verbose_name="著者",

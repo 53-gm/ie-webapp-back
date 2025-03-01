@@ -1,9 +1,12 @@
 from django.urls import include, path
 from .views import (
+    DepartmentListView,
+    FacultyListView,
     ProfileView,
 )
 
 urlpatterns = [
-    # path('me/', UserDetailView.as_view(), name='user-detail'),
-    path("me/profile/", ProfileView.as_view(), name="profile-complete"),
+    path("me/profile/", ProfileView.as_view(), name="profile-detail"),
+    path("faculties/", FacultyListView.as_view(), name="faculty-list"),
+    path("departments/", DepartmentListView.as_view(), name="department-list"),
 ]

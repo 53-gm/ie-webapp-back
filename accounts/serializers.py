@@ -1,117 +1,127 @@
-import logging
 from rest_framework import serializers
-from academics.models import Faculty, Department
-from academics.serializers import DepartmentSerializer, FacultySerializer
-from accounts.constants import GRADE_CHOICES
-from .models import CustomUser
-from dj_rest_auth.registration.serializers import RegisterSerializer
-from dj_rest_auth.serializers import UserDetailsSerializer
+from .models import Faculty, Department
+from common.exceptions import BusinessLogicError, ValidationError
+from .models import UserProfile
+from django.contrib.auth.models import User
 
 
-class CustomRegisterSerializer(RegisterSerializer):
-    faculty = serializers.PrimaryKeyRelatedField(
-        queryset=Faculty.objects.all(), required=False, allow_null=True
-    )
-    department = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), required=False, allow_null=True
-    )
-    grade = serializers.ChoiceField(choices=GRADE_CHOICES, required=False)
-
-    def get_cleaned_data(self):
-        data = super().get_cleaned_data()
-        data["display_name"] = self.validated_data.get("display_name", "")
-        data["faculty"] = self.validated_data.get("faculty", None)
-        data["department"] = self.validated_data.get("department", None)
-        data["grade"] = self.validated_data.get("grade", None)
-        data["picture"] = self.validated_data.get("picture", None)
-        data["user_id"] = self.validated_data.get("user_id", None)
-        return data
-
-    def save(self, request):
-        user = super().save(request)
-        user.display_name = self.validated_data.get("display_name", "")
-        user.faculty = self.validated_data.get("faculty", None)
-        user.department = self.validated_data.get("department", None)
-        user.grade = self.validated_data.get("grade", None)
-        user.picture = self.validated_data.get("picture", None)
-        user.user_id = self.validated_data.get("user_id", None)
-        user.is_profile_complete = False
-        user.save()
-        return user
+class FacultySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Faculty
+        fields = ["id", "name"]
 
 
-class CustomUserDetailsSerializer(UserDetailsSerializer):
+class DepartmentSerializer(serializers.ModelSerializer):
     faculty = FacultySerializer(read_only=True)
-    faculty_id = serializers.PrimaryKeyRelatedField(
-        queryset=Faculty.objects.all(), write_only=True, source="faculty"
-    )
-    department = DepartmentSerializer(read_only=True)
-    department_id = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), write_only=True, source="department"
-    )
-
-    class Meta(UserDetailsSerializer.Meta):
-        fields = (
-            "email",
-            "department",
-            "department_id",
-            "display_name",
-            "faculty",
-            "faculty_id",
-            "grade",
-            "is_profile_complete",
-            "picture",
-            "user_id",
-        )
-
-    def validate_user_id(self, value):
-        user = self.context.get("request").user if self.context.get("request") else None
-        if (
-            user
-            and CustomUser.objects.filter(user_id=value).exclude(id=user.id).exists()
-        ):
-            raise serializers.ValidationError("このユーザーIDは既に使用されています")
-        return value
-
-
-class ProfileSerializer(serializers.ModelSerializer):
-    faculty = FacultySerializer(read_only=True)
-    faculty_id = serializers.PrimaryKeyRelatedField(
-        queryset=Faculty.objects.all(), write_only=True, source="faculty"
-    )
-    department = DepartmentSerializer(read_only=True)
-    department_id = serializers.PrimaryKeyRelatedField(
-        queryset=Department.objects.all(), write_only=True, source="department"
-    )
 
     class Meta:
-        model = CustomUser
+        model = Department
+        fields = ["id", "name", "faculty"]
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """プロフィール情報のシリアライザ - 読み取りと更新の両方をサポート"""
+
+    faculty = FacultySerializer(read_only=True)
+    faculty_id = serializers.PrimaryKeyRelatedField(
+        queryset=Faculty.objects.all(),
+        write_only=True,
+        source="faculty",
+        required=False,
+        allow_null=True,
+    )
+    department = DepartmentSerializer(read_only=True)
+    department_id = serializers.PrimaryKeyRelatedField(
+        queryset=Department.objects.all(),
+        write_only=True,
+        source="department",
+        required=False,
+        allow_null=True,
+    )
+    email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = UserProfile
         fields = [
-            "email",
+            "profile_id",
             "display_name",
+            "email",
             "faculty",
             "faculty_id",
             "department",
             "department_id",
             "grade",
-            "is_profile_complete",
             "picture",
-            "user_id",
+            "is_profile_complete",
         ]
-        read_only_fields = ["email", "is_profile_complete"]
+        read_only_fields = ["is_profile_complete"]
+
+    def validate_user_id(self, value):
+        """ユーザーIDのバリデーション"""
+        # 文字数チェック
+        if len(value) < 4:
+            # カスタムエラークラスを使用
+            raise ValidationError("ユーザーIDは4文字以上である必要があります")
+
+        # ユニーク性チェック
+        if (
+            UserProfile.objects.exclude(pk=self.instance.pk if self.instance else None)
+            .filter(user_id=value)
+            .exists()
+        ):
+            raise ValidationError("このユーザーIDは既に使用されています")
+
+        return value
+
+    def validate(self, data):
+        """複数フィールドの関連性チェック"""
+        faculty = data.get("faculty")
+        department = data.get("department")
+
+        # 学部と学科の整合性チェック
+        if faculty and department and department.faculty != faculty:
+            raise BusinessLogicError(
+                {"department": "選択された学科は選択された学部に属していません"}
+            )
+
+        return data
 
     def update(self, instance, validated_data):
+        """プロフィール情報を更新し、完了状態を自動チェック"""
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-        instance.is_profile_complete = True  # プロファイル完了
+
+        # プロフィール完了状態を確認して更新
+        instance.check_profile_complete()
         instance.save()
         return instance
 
-    def validate_user_id(self, value):
-        user = self.context.get("request").user if self.context.get("request") else None
-        if (
-            user
-            and CustomUser.objects.filter(user_id=value).exclude(id=user.id).exists()
-        ):
-            raise serializers.ValidationError("このユーザーIDは既に使用されています")
-        return value
+
+class UserWithProfileSerializer(serializers.ModelSerializer):
+    """ユーザーとプロフィール情報を含むシリアライザ"""
+
+    # プロフィール情報をネストして表示
+    profile_id = serializers.CharField(source="profile.profile_id", read_only=True)
+    display_name = serializers.CharField(source="profile.display_name", read_only=True)
+    faculty = FacultySerializer(source="profile.faculty", read_only=True)
+    department = DepartmentSerializer(source="profile.department", read_only=True)
+    grade = serializers.IntegerField(source="profile.grade", read_only=True)
+    picture = serializers.ImageField(source="profile.picture", read_only=True)
+    is_profile_complete = serializers.BooleanField(
+        source="profile.is_profile_complete", read_only=True
+    )
+
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "profile_id",
+            "display_name",
+            "faculty",
+            "department",
+            "grade",
+            "picture",
+            "is_profile_complete",
+        ]

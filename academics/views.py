@@ -1,31 +1,17 @@
-from django.shortcuts import render
-from rest_framework.permissions import AllowAny
 from rest_framework import generics
-
+import logging
 from academics.filters import RegistrationFilter, LectureFilter
-from .models import Department, Faculty, Lecture, Registration, Schedule
+from .models import Lecture, Registration, Schedule
 from rest_framework import viewsets, permissions
 from .serializers import (
     LectureSerializer,
     RegistrationSerializer,
     ScheduleSerializer,
-    DepartmentSerializer,
-    FacultySerializer,
 )
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 
-
-class FacultyListView(generics.ListAPIView):
-    permission_classes = [AllowAny]
-    queryset = Faculty.objects.all()
-    serializer_class = FacultySerializer
-
-
-class DepartmentListView(generics.ListAPIView):
-    permission_classes = [AllowAny]
-    queryset = Department.objects.all()
-    serializer_class = DepartmentSerializer
+logger = logging.getLogger(__name__)
 
 
 class LectureViewSet(viewsets.ModelViewSet):
@@ -39,8 +25,8 @@ class LectureViewSet(viewsets.ModelViewSet):
         if user.is_authenticated:
             # ユーザーの所属学科または学部に関連する講義、または所有者がいない講義
             return Lecture.objects.filter(
-                Q(departments=user.department)
-                & Q(departments__faculty=user.faculty)
+                Q(departments=user.profile.department)
+                & Q(departments__faculty=user.profile.faculty)
                 & (Q(owner__isnull=True) | Q(owner=user))
             ).distinct()
         else:

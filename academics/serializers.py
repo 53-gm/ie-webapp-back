@@ -1,22 +1,10 @@
 from rest_framework import serializers
 
 from academics.constants import TERM_CHOICES
+from accounts.models import Department
+from accounts.serializers import DepartmentSerializer
 
-from .models import Department, Faculty, Lecture, Registration, Schedule, Term
-
-
-class FacultySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Faculty
-        fields = ["id", "name"]
-
-
-class DepartmentSerializer(serializers.ModelSerializer):
-    faculty = FacultySerializer(read_only=True)
-
-    class Meta:
-        model = Department
-        fields = ["id", "name", "faculty"]
+from .models import Lecture, Registration, Schedule, Term
 
 
 class TermSerializer(serializers.ModelSerializer):

@@ -1,14 +1,14 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 
-from accounts.models import CustomUser
-from accounts.serializers import CustomUserDetailsSerializer
+from accounts.serializers import UserWithProfileSerializer
 from .models import Article
 
 
 class ArticleSerializer(serializers.ModelSerializer):
-    author = CustomUserDetailsSerializer(read_only=True)
+    author = UserWithProfileSerializer(read_only=True)
     author_id = serializers.PrimaryKeyRelatedField(
-        queryset=CustomUser.objects.all(),
+        queryset=User.objects.all(),
         write_only=True,
         source="author",
         required=False,
