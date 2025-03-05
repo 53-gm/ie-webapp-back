@@ -3,7 +3,7 @@ from django.db import models
 from django.forms import ValidationError
 from django.contrib.auth.models import User
 
-from academics.constants import DAY_CHOICES, TERM_CHOICES, TIME_CHOICES
+from academics.constants import DAY_CHOICES, MAX_TIME, TERM_CHOICES, TIME_CHOICES
 from accounts.models import Department
 
 
@@ -33,6 +33,7 @@ class Term(models.Model):
 class Schedule(models.Model):
     day = models.PositiveSmallIntegerField(choices=DAY_CHOICES, verbose_name="曜日")
     time = models.PositiveSmallIntegerField(choices=TIME_CHOICES, verbose_name="時限")
+    id = models.PositiveSmallIntegerField(primary_key=True, editable=False)
 
     class Meta:
         unique_together = ("day", "time")
@@ -41,6 +42,11 @@ class Schedule(models.Model):
 
     def __str__(self):
         return f"{dict(DAY_CHOICES).get(self.day)} {dict(TIME_CHOICES).get(self.time)}"
+
+    def save(self, *args, **kwargs):
+        # dayとtimeの組み合わせから一意なIDを計算
+        self.id = (self.day - 1) * MAX_TIME + self.time
+        super().save(*args, **kwargs)
 
 
 class Lecture(models.Model):

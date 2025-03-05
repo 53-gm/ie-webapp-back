@@ -50,6 +50,18 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return Response(result)
 
 
+class ProfileDetailView(generics.RetrieveAPIView):
+    """プロフィールIDによるユーザープロフィール取得ビュー"""
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [AllowAny]
+    lookup_field = "profile_id"
+    lookup_url_kwarg = "profile_id"
+
+    def get_queryset(self):
+        return UserProfile.objects.all()
+
+
 class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     callback_url = "http://localhost:3000/api/auth/callback/google"

@@ -95,5 +95,5 @@ class LectureAdmin(ImportExportModelAdmin):
 
 @admin.register(Registration)
 class RegistrationAdmin(admin.ModelAdmin):
-    list_display = ("user", "lecture", "registered_at")
+    list_display = ("id", "user", "lecture", "registered_at")
     date_hierarchy = "registered_at"

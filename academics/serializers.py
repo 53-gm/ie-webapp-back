@@ -3,6 +3,7 @@ from rest_framework import serializers
 from academics.constants import TERM_CHOICES
 from accounts.models import Department
 from accounts.serializers import DepartmentSerializer
+from common.exceptions import ValidationError
 
 from .models import Lecture, Registration, Schedule, Term
 
@@ -89,7 +90,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
         year = data.get("year")
 
         if not user.is_authenticated:
-            raise serializers.ValidationError("認証が必要です。")
+            raise ValidationError("認証が必要です。")
 
         # 取得する講義のタームとスケジュール
         new_lecture_terms = lecture.terms.all()
@@ -109,7 +110,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 "lecture__name", flat=True
             )
             overlapping_lectures_str = ", ".join(overlapping_lectures)
-            raise serializers.ValidationError(
+            raise ValidationError(
                 f"登録しようとしている講義の日程が（{overlapping_lectures_str}）と重複しています。"
             )
 

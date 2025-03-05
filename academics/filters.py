@@ -16,7 +16,7 @@ class LectureFilter(django_filters.FilterSet):
         label="学科",
     )
     schedules = django_filters.ModelMultipleChoiceFilter(
-        field_name="schedules__id",
+        field_name="schedules",
         queryset=Schedule.objects.all(),
         label="スケジュール",
     )
@@ -51,6 +51,11 @@ class LectureFilter(django_filters.FilterSet):
 class RegistrationFilter(django_filters.FilterSet):
     year = django_filters.NumberFilter(field_name="year", lookup_expr="exact")
     number = django_filters.NumberFilter(method="filter_by_term")
+    schedules = django_filters.ModelMultipleChoiceFilter(
+        field_name="lecture__schedules",
+        queryset=Schedule.objects.all(),
+        label="スケジュール",
+    )
 
     class Meta:
         model = Registration
